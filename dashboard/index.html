@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Real-Time CV Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            margin: 5px 0 0;
+        }
+
+        .container {
+            padding: 30px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .status {
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .video-container {
+            background: black;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 25px;
+        }
+
+        .video-container img {
+            width: 100%;
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-title {
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .unit {
+            font-size: 14px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Real-Time Computer Vision Dashboard</h1>
+        <p>YOLO + ByteTrack + FastAPI</p>
+    </header>
+
+    <div class="container">
+
+        <div class="status" id="status">
+            🔴 Connecting...
+        </div>
+
+        <!-- LIVE VIDEO -->
+        <div class="video-container">
+
+            <img
+                src="/video"
+                alt="Live Computer Vision Video"
+            >
+
+        </div>
+
+        <!-- METRICS -->
+        <div class="metrics-grid">
+
+            <div class="card">
+                <div class="card-title">
+                    Current Occupancy
+                </div>
+
+                <div class="card-value">
+                    <span id="occupancy">0</span>
+                    <span class="unit">people</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-title">
+                    Total Entries
+                </div>
+
+                <div class="card-value">
+                    <span id="entries">0</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-title">
+                    Average Dwell Time
+                </div>
+
+                <div class="card-value">
+                    <span id="dwell">0</span>
+                    <span class="unit">sec</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-title">
+                    Processing FPS
+                </div>
+
+                <div class="card-value">
+                    <span id="fps">0</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-title">
+                    Inference Latency
+                </div>
+
+                <div class="card-value">
+                    <span id="latency">0</span>
+                    <span class="unit">ms</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-title">
+                    Dropped Frames
+                </div>
+
+                <div class="card-value">
+                    <span id="dropped">0</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        const status =
+            document.getElementById("status");
+
+        const socket =
+            new WebSocket(
+                "ws://" +
+                window.location.host +
+                "/ws"
+            );
+
+
+        socket.onopen = function () {
+
+            status.textContent =
+                "🟢 Connected to CV Service";
+
+        };
+
+
+        socket.onmessage = function (event) {
+
+            const data =
+                JSON.parse(event.data);
+
+            document.getElementById(
+                "occupancy"
+            ).textContent =
+                data.occupancy;
+
+            document.getElementById(
+                "entries"
+            ).textContent =
+                data.total_entries;
+
+            document.getElementById(
+                "dwell"
+            ).textContent =
+                data.average_dwell_seconds;
+
+            document.getElementById(
+                "fps"
+            ).textContent =
+                data.fps;
+
+            document.getElementById(
+                "latency"
+            ).textContent =
+                data.inference_latency_ms;
+
+            document.getElementById(
+                "dropped"
+            ).textContent =
+                data.dropped_frames;
+
+        };
+
+
+        socket.onclose = function () {
+
+            status.textContent =
+                "🔴 WebSocket disconnected";
+
+        };
+
+    </script>
+
+</body>
+
+</html>
