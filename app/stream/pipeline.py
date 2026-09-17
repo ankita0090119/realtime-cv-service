@@ -1,8 +1,7 @@
 import threading
 import time
 
-from stream.frame_buffer import FrameBuffer
-
+from app.stream.frame_buffer import FrameBuffer
 
 class FrameProducer:
 
