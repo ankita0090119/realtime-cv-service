@@ -2,6 +2,7 @@ import threading
 import time
 
 import cv2
+from app.config import settings
 
 from app.stream.video_reader import VideoReader
 from app.stream.pipeline import FrameProducer
@@ -14,6 +15,7 @@ from app.analytics.dwell_time import DwellTimeTracker
 from app.analytics.metrics import PerformanceMetrics
 
 
+
 class CVService:
 
     def __init__(self):
@@ -23,7 +25,7 @@ class CVService:
         # -----------------------------
 
         self.video = VideoReader(
-            "data/videos/CAM1.mp4"
+            settings.video_source
         )
 
         # -----------------------------
@@ -32,14 +34,16 @@ class CVService:
 
         self.producer = FrameProducer(
             video_reader=self.video,
-            buffer_size=2
+            buffer_size= settings.buffer_size
         )
 
         # -----------------------------
         # Object detector + tracker
         # -----------------------------
 
-        self.detector = Detector()
+        self.detector = Detector(
+            settings.model_path
+        )
 
         # -----------------------------
         # Analytics
@@ -56,11 +60,11 @@ class CVService:
         # -----------------------------
 
         self.zone = Zone(
-            name="Product Area",
-            x1=1200,
-            y1=200,
-            x2=1630,
-            y2=880
+            name=settings.zone_name,
+            x1=settings.zone_x1,
+            y1=settings.zone_y1,
+            x2=settings.zone_x2,
+            y2=settings.zone_y2
         )
 
         # -----------------------------
