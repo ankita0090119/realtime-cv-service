@@ -5,6 +5,7 @@ from stream.video_reader import VideoReader
 from analytics.zone import Zone
 from analytics.occupancy import OccupancyCounter
 from analytics.dwell_time import DwellTimeTracker
+from analytics.metrics import PerformanceMetrics
 
 
 def main():
@@ -23,9 +24,10 @@ def main():
     # --------------------------------------------------
     occupancy_counter = OccupancyCounter()
     dwell_tracker = DwellTimeTracker()
+    metrics = PerformanceMetrics()
 
     # --------------------------------------------------
-    # 4. Define monitoring zone
+    # 4. Monitoring zone
     # --------------------------------------------------
     zone = Zone(
         name="Product Area",
@@ -36,11 +38,10 @@ def main():
     )
 
     # --------------------------------------------------
-    # 5. Process video frame by frame
+    # 5. Process video
     # --------------------------------------------------
     while True:
 
-        # Read frame
         frame = video.read()
 
         if frame is None:
@@ -52,27 +53,32 @@ def main():
         )
 
         # --------------------------------------------------
-        # 6. YOLO detection + ByteTrack tracking
+        # 6. Measure YOLO + ByteTrack inference
         # --------------------------------------------------
+        inference_start = metrics.start_inference()
+
         results = detector.predict(frame)
+
+        inference_latency = metrics.end_inference(
+            inference_start
+        )
+
+        metrics.update()
 
         result = results[0]
 
         # Draw detections and tracking IDs
         annotated_frame = result.plot()
 
-        # IDs of people currently inside the zone
+        # --------------------------------------------------
+        # 7. Find people inside the zone
+        # --------------------------------------------------
         inside_ids = []
 
-        # --------------------------------------------------
-        # 7. Process tracked objects
-        # --------------------------------------------------
         if result.boxes.id is not None:
 
-            # Bounding boxes
             boxes = result.boxes.xyxy.cpu().numpy()
 
-            # Tracking IDs
             track_ids = (
                 result.boxes.id
                 .cpu()
@@ -80,7 +86,6 @@ def main():
                 .astype(int)
             )
 
-            # Object classes
             classes = (
                 result.boxes.cls
                 .cpu()
@@ -88,27 +93,23 @@ def main():
                 .astype(int)
             )
 
-            # Process every tracked object
             for box, track_id, class_id in zip(
                 boxes,
                 track_ids,
                 classes
             ):
 
-                # COCO class 0 = person
+                # Only person
                 if class_id != 0:
                     continue
 
-                # Bounding box coordinates
                 x1, y1, x2, y2 = box
 
-                # Calculate center point
+                # Bounding-box center
                 center_x = int((x1 + x2) / 2)
                 center_y = int((y1 + y2) / 2)
 
-                # --------------------------------------------------
-                # 8. Zone membership
-                # --------------------------------------------------
+                # Check zone
                 if zone.contains(center_x, center_y):
 
                     inside_ids.append(track_id)
@@ -121,7 +122,6 @@ def main():
                         )
                     )
 
-                    # Display dwell time near person
                     cv2.putText(
                         annotated_frame,
                         f"{current_dwell:.1f}s",
@@ -133,14 +133,14 @@ def main():
                     )
 
         # --------------------------------------------------
-        # 9. Update occupancy
+        # 8. Occupancy
         # --------------------------------------------------
         occupancy_counter.update(inside_ids)
 
         occupancy = occupancy_counter.count()
 
         # --------------------------------------------------
-        # 10. Update dwell-time tracker
+        # 9. Entry / Exit / Dwell
         # --------------------------------------------------
         entered_ids, exited_ids = dwell_tracker.update(
             inside_ids,
@@ -148,7 +148,7 @@ def main():
         )
 
         # --------------------------------------------------
-        # 11. Draw zone
+        # 10. Draw zone
         # --------------------------------------------------
         cv2.rectangle(
             annotated_frame,
@@ -158,7 +158,6 @@ def main():
             2
         )
 
-        # Zone name
         cv2.putText(
             annotated_frame,
             zone.name,
@@ -170,10 +169,34 @@ def main():
         )
 
         # --------------------------------------------------
-        # 12. Display analytics
+        # 11. Performance metrics
         # --------------------------------------------------
+        fps = metrics.get_fps()
+        average_latency = metrics.get_average_latency_ms()
 
-        # Current occupancy
+        cv2.putText(
+            annotated_frame,
+            f"FPS: {fps:.1f}",
+            (20, 145),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (255, 255, 0),
+            2
+        )
+
+        cv2.putText(
+            annotated_frame,
+            f"Inference: {average_latency:.1f} ms",
+            (20, 180),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (255, 255, 0),
+            2
+        )
+
+        # --------------------------------------------------
+        # 12. Occupancy
+        # --------------------------------------------------
         cv2.putText(
             annotated_frame,
             f"Occupancy: {occupancy}",
@@ -184,7 +207,9 @@ def main():
             2
         )
 
-        # Total entries
+        # --------------------------------------------------
+        # 13. Total entries
+        # --------------------------------------------------
         cv2.putText(
             annotated_frame,
             f"Total Entries: {dwell_tracker.total_entries}",
@@ -195,7 +220,9 @@ def main():
             2
         )
 
-        # Average completed dwell time
+        # --------------------------------------------------
+        # 14. Average dwell
+        # --------------------------------------------------
         cv2.putText(
             annotated_frame,
             f"Avg Dwell: "
@@ -208,7 +235,7 @@ def main():
         )
 
         # --------------------------------------------------
-        # 13. Display frame
+        # 15. Display
         # --------------------------------------------------
         cv2.imshow(
             "Real-Time Detection",
@@ -220,7 +247,7 @@ def main():
             break
 
     # --------------------------------------------------
-    # 14. Cleanup
+    # 16. Cleanup
     # --------------------------------------------------
     video.release()
     cv2.destroyAllWindows()
