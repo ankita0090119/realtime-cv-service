@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+
+.env
+.env.*
+
+models/
+data/
+outputs/
+
+.pytest_cache/
+.mypy_cache/
+
+.vscode/
+.idea/
