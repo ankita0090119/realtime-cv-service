@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+websockets
+opencv-python
+ultralytics
+torch
+torchvision
+python-dotenv
