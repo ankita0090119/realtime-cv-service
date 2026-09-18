@@ -1,7 +1,9 @@
+import logging
 import threading
 import time
 
 import cv2
+
 from app.config import settings
 
 from app.stream.video_reader import VideoReader
@@ -15,49 +17,29 @@ from app.analytics.dwell_time import DwellTimeTracker
 from app.analytics.metrics import PerformanceMetrics
 
 
+logger = logging.getLogger(__name__)
+
 
 class CVService:
 
     def __init__(self):
 
-        # -----------------------------
-        # Video source
-        # -----------------------------
-
         self.video = VideoReader(
             settings.video_source
         )
 
-        # -----------------------------
-        # Frame producer
-        # -----------------------------
-
         self.producer = FrameProducer(
             video_reader=self.video,
-            buffer_size= settings.buffer_size
+            buffer_size=settings.buffer_size
         )
-
-        # -----------------------------
-        # Object detector + tracker
-        # -----------------------------
 
         self.detector = Detector(
             settings.model_path
         )
 
-        # -----------------------------
-        # Analytics
-        # -----------------------------
-
         self.occupancy_counter = OccupancyCounter()
-
         self.dwell_tracker = DwellTimeTracker()
-
         self.metrics = PerformanceMetrics()
-
-        # -----------------------------
-        # Zone
-        # -----------------------------
 
         self.zone = Zone(
             name=settings.zone_name,
@@ -67,29 +49,14 @@ class CVService:
             y2=settings.zone_y2
         )
 
-        # -----------------------------
-        # Background processing
-        # -----------------------------
-
         self.running = False
-
         self.processing_thread = None
 
-        # -----------------------------
-        # Latest annotated frame
-        # -----------------------------
+        self.processing_error = None
 
         self.latest_frame = None
-        self.frame_id=0
-
-        # Lock protects latest_frame
-        # when CV thread and API thread
-        # access it at the same time.
+        self.frame_id = 0
         self.frame_lock = threading.Lock()
-
-        # -----------------------------
-        # Latest metrics
-        # -----------------------------
 
         self.last_metrics = {
             "occupancy": 0,
@@ -100,10 +67,6 @@ class CVService:
             "dropped_frames": 0
         }
 
-    # =====================================================
-    # START SERVICE
-    # =====================================================
-
     def start(self):
 
         if self.running:
@@ -111,10 +74,8 @@ class CVService:
 
         self.running = True
 
-        # Start frame producer
         self.producer.start()
 
-        # Start processing thread
         self.processing_thread = threading.Thread(
             target=self._processing_loop,
             daemon=True
@@ -122,26 +83,45 @@ class CVService:
 
         self.processing_thread.start()
 
-    # =====================================================
-    # PROCESSING LOOP
-    # =====================================================
-
     def _processing_loop(self):
+
+        logger.info(
+            "CV processing loop started"
+        )
 
         while self.running:
 
-            result = self.process_frame()
+            try:
 
-            if result is None:
+                result = self.process_frame()
 
-                if not self.producer.running:
-                    break
+                if result is None:
 
-                time.sleep(0.001)
+                    if not self.producer.running:
 
-    # =====================================================
-    # PROCESS ONE FRAME
-    # =====================================================
+                        logger.warning(
+                            "Frame producer stopped"
+                        )
+
+                        break
+
+                    time.sleep(0.001)
+
+            except Exception as exc:
+
+                self.processing_error = str(exc)
+
+                logger.exception(
+                    "Error in CV processing loop"
+                )
+
+                self.running = False
+
+                break
+
+        logger.info(
+            "CV processing loop stopped"
+        )
 
     def process_frame(self):
 
@@ -152,15 +132,13 @@ class CVService:
 
         frame, timestamp = packet
 
-        # -----------------------------
-        # YOLO inference
-        # -----------------------------
-
         inference_start = (
             self.metrics.start_inference()
         )
 
-        results = self.detector.predict(frame)
+        results = self.detector.predict(
+            frame
+        )
 
         self.metrics.end_inference(
             inference_start
@@ -170,35 +148,30 @@ class CVService:
 
         result = results[0]
 
-        # -----------------------------
-        # Draw YOLO detections
-        # -----------------------------
-
         annotated_frame = result.plot()
 
         inside_ids = []
 
-        # -----------------------------
-        # Process tracked objects
-        # -----------------------------
-
         if result.boxes.id is not None:
 
             boxes = (
-                result.boxes.xyxy
+                result.boxes
+                .xyxy
                 .cpu()
                 .numpy()
             )
 
             track_ids = (
-                result.boxes.id
+                result.boxes
+                .id
                 .cpu()
                 .numpy()
                 .astype(int)
             )
 
             classes = (
-                result.boxes.cls
+                result.boxes
+                .cls
                 .cpu()
                 .numpy()
                 .astype(int)
@@ -210,7 +183,7 @@ class CVService:
                 classes
             ):
 
-                # YOLO class 0 = person
+                # Only process person class
                 if class_id != 0:
                     continue
 
@@ -224,10 +197,6 @@ class CVService:
                     (y1 + y2) / 2
                 )
 
-                # -----------------------------
-                # Zone check
-                # -----------------------------
-
                 if self.zone.contains(
                     center_x,
                     center_y
@@ -236,10 +205,6 @@ class CVService:
                     inside_ids.append(
                         track_id
                     )
-
-                    # -------------------------
-                    # Current dwell time
-                    # -------------------------
 
                     current_dwell = (
                         self.dwell_tracker
@@ -262,10 +227,7 @@ class CVService:
                         2
                     )
 
-        # -----------------------------
-        # Occupancy
-        # -----------------------------
-
+        # Update occupancy
         self.occupancy_counter.update(
             inside_ids
         )
@@ -274,19 +236,13 @@ class CVService:
             self.occupancy_counter.count()
         )
 
-        # -----------------------------
-        # Entry / exit / dwell
-        # -----------------------------
-
+        # Update entry/exit and dwell time
         self.dwell_tracker.update(
             inside_ids,
             timestamp
         )
 
-        # -----------------------------
         # Performance metrics
-        # -----------------------------
-
         fps = self.metrics.get_fps()
 
         latency = (
@@ -295,13 +251,11 @@ class CVService:
         )
 
         dropped = (
-            self.producer.dropped_frames()
+            self.producer
+            .dropped_frames()
         )
 
-        # -----------------------------
         # Draw zone
-        # -----------------------------
-
         cv2.rectangle(
             annotated_frame,
             (
@@ -329,56 +283,51 @@ class CVService:
             2
         )
 
-        # -----------------------------
-        # Update metrics
-        # -----------------------------
-
+        # Store metrics
         self.last_metrics = {
             "occupancy": occupancy,
+
             "total_entries": (
-                self.dwell_tracker.total_entries
+                self.dwell_tracker
+                .total_entries
             ),
+
             "average_dwell_seconds": round(
-                self.dwell_tracker.get_average_dwell(),
+                self.dwell_tracker
+                .get_average_dwell(),
                 2
             ),
+
             "fps": round(
                 fps,
                 2
             ),
+
             "inference_latency_ms": round(
                 latency,
                 2
             ),
+
             "dropped_frames": dropped
         }
 
-        # -----------------------------
-        # Store latest frame
-        # -----------------------------
-
+        # Store latest frame safely
         with self.frame_lock:
 
             self.latest_frame = (
                 annotated_frame.copy()
             )
+
             self.frame_id += 1
+
         return {
             "frame": annotated_frame,
             "metrics": self.last_metrics
         }
 
-    # =====================================================
-    # GET METRICS
-    # =====================================================
-
     def get_metrics(self):
 
         return self.last_metrics.copy()
-
-    # =====================================================
-    # GET LATEST FRAME
-    # =====================================================
 
     def get_latest_frame(self):
 
@@ -388,29 +337,54 @@ class CVService:
                 return None
 
             return (
-            self.latest_frame.copy(),
-            self.frame_id
+                self.latest_frame.copy(),
+                self.frame_id
             )
-    # =====================================================
-    # STOP SERVICE
-    # =====================================================
+
+    def get_status(self):
+
+        return {
+            "processing": self.running,
+
+            "model_loaded": (
+                self.detector.model
+                is not None
+            ),
+
+            "video_source": (
+                self.video.source
+            ),
+
+            "video_open": (
+                self.video.capture.isOpened()
+            ),
+
+            "processing_error": (
+                self.processing_error
+            )
+        }
 
     def stop(self):
 
         if not self.running:
             return
 
+        logger.info(
+            "Stopping CV processing"
+        )
+
         self.running = False
 
-        # Stop producer
         self.producer.stop()
 
-        # Wait for processing thread
         if self.processing_thread is not None:
 
             self.processing_thread.join(
                 timeout=2
             )
 
-        # Release video
         self.video.release()
+
+        logger.info(
+            "CV processing stopped"
+        )

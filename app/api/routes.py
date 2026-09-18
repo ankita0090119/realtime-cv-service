@@ -1,13 +1,23 @@
 import asyncio
+import logging
 import time
+
 import cv2
 
-from fastapi import APIRouter, Request, WebSocket
+from fastapi import (
+    APIRouter,
+    Request,
+    WebSocket,
+    HTTPException
+)
+
 from fastapi.responses import StreamingResponse
 from fastapi.websockets import WebSocketDisconnect
 
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/health")
@@ -17,6 +27,34 @@ def health_check():
         "status": "healthy",
         "service": "realtime-cv-service"
     }
+
+
+@router.get("/ready")
+def readiness_check(request: Request):
+
+    cv_service = request.app.state.cv_service
+
+    status = cv_service.get_status()
+
+    if (
+        status["processing"]
+        and status["model_loaded"]
+        and status["video_open"]
+        and status["processing_error"] is None
+    ):
+
+        return {
+            "status": "ready",
+            **status
+        }
+
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "status": "not_ready",
+            **status
+        }
+    )
 
 
 @router.get("/metrics")
@@ -34,6 +72,10 @@ async def websocket_endpoint(
 
     await websocket.accept()
 
+    logger.info(
+        "WebSocket client connected"
+    )
+
     try:
 
         while True:
@@ -46,7 +88,8 @@ async def websocket_endpoint(
             )
 
             metrics = (
-                cv_service.get_metrics()
+                cv_service
+                .get_metrics()
             )
 
             await websocket.send_json(
@@ -57,13 +100,19 @@ async def websocket_endpoint(
 
     except WebSocketDisconnect:
 
-        print("WebSocket client disconnected")
+        logger.info(
+            "WebSocket client disconnected"
+        )
 
 
-def generate_video_frames(request: Request):
+def generate_video_frames(
+    request: Request
+):
 
     cv_service = (
-        request.app.state.cv_service
+        request.app
+        .state
+        .cv_service
     )
 
     last_frame_id = -1
@@ -71,25 +120,27 @@ def generate_video_frames(request: Request):
     while True:
 
         result = (
-            cv_service.get_latest_frame()
+            cv_service
+            .get_latest_frame()
         )
 
         if result is None:
 
             time.sleep(0.01)
+
             continue
 
         frame, frame_id = result
 
-        # Don't send the same frame repeatedly.
+        # Don't send the same frame repeatedly
         if frame_id == last_frame_id:
 
             time.sleep(0.01)
+
             continue
 
         last_frame_id = frame_id
 
-        # Convert OpenCV frame to JPEG
         success, buffer = cv2.imencode(
             ".jpg",
             frame,
@@ -108,11 +159,14 @@ def generate_video_frames(request: Request):
             b"--frame\r\n"
             b"Content-Type: image/jpeg\r\n"
             b"Content-Length: "
-            + str(len(frame_bytes)).encode()
+            + str(
+                len(frame_bytes)
+            ).encode()
             + b"\r\n\r\n"
             + frame_bytes
             + b"\r\n"
         )
+
 
 @router.get("/video")
 def video_stream(request: Request):
