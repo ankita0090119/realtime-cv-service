@@ -20,6 +20,11 @@ class Settings:
             "yolo11n.pt"
         )
 
+        self.inference_backend = os.getenv(
+            "INFERENCE_BACKEND",
+            "pytorch"
+        )
+        
         self.buffer_size = int(
             os.getenv(
                 "BUFFER_SIZE",

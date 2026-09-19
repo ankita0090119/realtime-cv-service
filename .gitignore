@@ -16,3 +16,7 @@ outputs/
 
 .vscode/
 .idea/
+*.onnx
+*_openvino_model/
+benchmarks/data/
+kernel.errors.txt

@@ -3,6 +3,7 @@ import time
 
 from app.stream.frame_buffer import FrameBuffer
 
+
 class FrameProducer:
 
     def __init__(self, video_reader, buffer_size=2):
@@ -73,3 +74,11 @@ class FrameProducer:
     def dropped_frames(self):
 
         return self.buffer.dropped_count()
+
+    def total_frames(self):
+
+        return self.buffer.total_count()
+
+    def drop_ratio(self):
+
+        return self.buffer.drop_ratio()
