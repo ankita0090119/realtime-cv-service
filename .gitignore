@@ -20,3 +20,6 @@ outputs/
 *_openvino_model/
 benchmarks/data/
 kernel.errors.txt
+dataset.zip
+dataset/
+runs/

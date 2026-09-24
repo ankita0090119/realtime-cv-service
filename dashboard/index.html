@@ -1,253 +1,1394 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Real-Time CV Dashboard</title>
+    <title>D5 Vision — Real-Time Computer Vision</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
+            font-family:
+                Inter,
+                ui-sans-serif,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            background: #fafafa;
+            color: #111827;
+            line-height: 1.6;
         }
 
-        header {
-            background: #1f2937;
-            color: white;
-            padding: 20px 30px;
+        /* =========================
+           NAVBAR
+        ========================= */
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 18px 7%;
+
+            background: rgba(250, 250, 250, 0.85);
+            backdrop-filter: blur(14px);
+
+            border-bottom: 1px solid #e5e7eb;
         }
 
-        header h1 {
-            margin: 0;
+        .logo {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
 
-        header p {
-            margin: 5px 0 0;
+        .logo span {
+            color: #6366f1;
         }
 
-        .container {
-            padding: 30px;
-            max-width: 1400px;
-            margin: auto;
+        nav a {
+            text-decoration: none;
+            color: #4b5563;
+            margin-left: 28px;
+            font-size: 14px;
+            font-weight: 600;
         }
 
-        .status {
-            margin-bottom: 20px;
-            font-weight: bold;
+        nav a:hover {
+            color: #6366f1;
         }
 
-        .video-container {
-            background: black;
-            border-radius: 10px;
-            overflow: hidden;
+        /* =========================
+           HERO
+        ========================= */
+
+        .hero {
+            min-height: 78vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            text-align: center;
+
+            padding: 80px 20px;
+
+            background:
+                radial-gradient(
+                    circle at 50% 20%,
+                    rgba(99, 102, 241, 0.14),
+                    transparent 40%
+                ),
+                #fafafa;
+        }
+
+        .hero-content {
+            max-width: 900px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 7px 14px;
+
+            border-radius: 999px;
+
+            background: #eef2ff;
+            color: #4f46e5;
+
+            font-size: 13px;
+            font-weight: 700;
+
             margin-bottom: 25px;
         }
 
-        .video-container img {
-            width: 100%;
-            display: block;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+
+            border-radius: 50%;
+
+            background: #22c55e;
+
+            box-shadow:
+                0 0 0 5px rgba(34, 197, 94, 0.12);
         }
 
-        .metrics-grid {
+        .hero h1 {
+            font-size: clamp(48px, 7vw, 82px);
+            line-height: 0.98;
+
+            letter-spacing: -4px;
+
+            margin-bottom: 25px;
+        }
+
+        .gradient-text {
+            background:
+                linear-gradient(
+                    90deg,
+                    #6366f1,
+                    #8b5cf6,
+                    #ec4899
+                );
+
+            -webkit-background-clip: text;
+            background-clip: text;
+
+            color: transparent;
+        }
+
+        .hero p {
+            max-width: 650px;
+
+            margin: auto;
+
+            color: #6b7280;
+
+            font-size: 19px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+
+            margin-top: 35px;
+        }
+
+        .btn {
+            border: none;
+
+            padding: 13px 23px;
+
+            border-radius: 10px;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                transform 0.2s,
+                box-shadow 0.2s;
+        }
+
+        .btn-primary {
+            background: #111827;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 10px 25px rgba(17, 24, 39, 0.18);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #111827;
+
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+        }
+
+        /* =========================
+           SECTIONS
+        ========================= */
+
+        section {
+            padding: 90px 7%;
+        }
+
+        .section-heading {
+            max-width: 650px;
+
+            margin: 0 auto 50px;
+
+            text-align: center;
+        }
+
+        .section-heading h2 {
+            font-size: 42px;
+            letter-spacing: -2px;
+
+            margin-bottom: 12px;
+        }
+
+        .section-heading p {
+            color: #6b7280;
+        }
+
+        /* =========================
+           FEATURES
+        ========================= */
+
+        .features {
+            background: white;
+        }
+
+        .feature-grid {
+            max-width: 1100px;
+
+            margin: auto;
+
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
             gap: 20px;
         }
 
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        .feature {
+            padding: 30px;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 18px;
+
+            background: #ffffff;
+
+            transition:
+                transform 0.25s,
+                box-shadow 0.25s;
         }
 
-        .card-title {
-            color: #64748b;
-            margin-bottom: 10px;
+        .feature:hover {
+            transform: translateY(-6px);
+
+            box-shadow:
+                0 20px 45px rgba(15, 23, 42, 0.08);
         }
 
-        .card-value {
-            font-size: 30px;
-            font-weight: bold;
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background: #eef2ff;
+
+            color: #6366f1;
+
+            font-size: 22px;
+
+            margin-bottom: 20px;
         }
 
-        .unit {
+        .feature h3 {
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            color: #6b7280;
             font-size: 14px;
+        }
+
+        /* =========================
+           MONITOR
+        ========================= */
+
+        .monitor {
+            background: #f8fafc;
+        }
+
+        .monitor-wrapper {
+            max-width: 1250px;
+            margin: auto;
+        }
+
+        .live-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 20px;
+        }
+
+        .live-title {
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 8px 14px;
+
+            border-radius: 999px;
+
+            background: white;
+
+            border: 1px solid #e5e7eb;
+
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+
+            border-radius: 50%;
+
+            background: #ef4444;
+        }
+
+        .live-dot.active {
+            background: #22c55e;
+        }
+
+        /* VIDEO */
+
+        .video-box {
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background: #020617;
+
+            box-shadow:
+                0 25px 60px rgba(15, 23, 42, 0.15);
+        }
+
+        .video-topbar {
+            display: flex;
+            justify-content: space-between;
+
+            padding: 13px 18px;
+
+            background: #111827;
+
+            color: #cbd5e1;
+
+            font-size: 13px;
+        }
+
+        .video-box img {
+            width: 100%;
+
+            display: block;
+
+            max-height: 680px;
+
+            object-fit: contain;
+
+            background: black;
+        }
+
+        /* =========================
+           METRICS
+        ========================= */
+
+        .metrics {
+            margin-top: 25px;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 15px;
+        }
+
+        .metric {
+            padding: 22px;
+
+            background: white;
+
+            border-radius: 15px;
+
+            border: 1px solid #e5e7eb;
+        }
+
+        .metric-label {
             color: #64748b;
+
+            font-size: 13px;
+
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 30px;
+
+            font-weight: 800;
+
+            letter-spacing: -1px;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+
+            color: #94a3b8;
+
+            font-weight: 500;
+        }
+
+        /* =========================
+           PERFORMANCE
+        ========================= */
+
+        .performance {
+            background: white;
+        }
+
+        .charts {
+            max-width: 1100px;
+
+            margin: auto;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 20px;
+        }
+
+        .chart-card {
+            padding: 25px;
+
+            border-radius: 18px;
+
+            border: 1px solid #e5e7eb;
+
+            background: white;
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 220px;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        footer {
+            padding: 35px 7%;
+
+            text-align: center;
+
+            border-top: 1px solid #e5e7eb;
+
+            color: #64748b;
+
+            font-size: 13px;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 900px) {
+
+            .feature-grid,
+            .charts {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics {
+                grid-template-columns:
+                    repeat(2, 1fr);
+            }
+
+            nav a {
+                display: none;
+            }
+
+        }
+
+        @media (max-width: 600px) {
+
+            section {
+                padding: 65px 20px;
+            }
+
+            .hero h1 {
+                letter-spacing: -2px;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .live-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
         }
     </style>
 </head>
 
+
 <body>
 
-    <header>
-        <h1>Real-Time Computer Vision Dashboard</h1>
-        <p>YOLO + ByteTrack + FastAPI</p>
-    </header>
+<!-- =========================
+     NAVIGATION
+========================= -->
 
-    <div class="container">
+<nav>
 
-        <div class="status" id="status">
-            🔴 Connecting...
+    <div class="logo">
+        D5<span>Vision</span>
+    </div>
+
+    <div>
+        <a href="#features">Features</a>
+        <a href="#monitor">Live Monitor</a>
+        <a href="#performance">Performance</a>
+    </div>
+
+</nav>
+
+
+<!-- =========================
+     HERO
+========================= -->
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <div class="badge">
+            <span class="status-dot"></span>
+            Real-Time CV System
         </div>
 
-        <!-- LIVE VIDEO -->
-        <div class="video-container">
+        <h1>
+            Computer Vision,
+            <br>
+            <span class="gradient-text">
+                happening live.
+            </span>
+        </h1>
+
+        <p>
+            Detect, track, and analyze activity from video streams
+            using YOLO, ByteTrack, and a real-time FastAPI pipeline.
+        </p>
+
+        <div class="hero-buttons">
+
+            <button
+                class="btn btn-primary"
+                onclick="scrollToMonitor()"
+            >
+                Launch Live Monitor →
+            </button>
+
+            <button
+                class="btn btn-secondary"
+                onclick="scrollToFeatures()"
+            >
+                Explore Features
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     FEATURES
+========================= -->
+
+<section
+    class="features"
+    id="features"
+>
+
+    <div class="section-heading">
+
+        <h2>
+            Built for real-time analytics.
+        </h2>
+
+        <p>
+            A complete computer vision pipeline from video
+            ingestion to live analytics.
+        </p>
+
+    </div>
+
+
+    <div class="feature-grid">
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ◉
+            </div>
+
+            <h3>
+                YOLO Detection
+            </h3>
+
+            <p>
+                Real-time object detection using YOLO
+                with frame-level inference.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ◎
+            </div>
+
+            <h3>
+                ByteTrack Tracking
+            </h3>
+
+            <p>
+                Maintains object identities across frames
+                for continuous tracking.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ↗
+            </div>
+
+            <h3>
+                Live Analytics
+            </h3>
+
+            <p>
+                Monitor occupancy, entries, dwell time,
+                FPS, latency, and dropped frames.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     LIVE MONITOR
+========================= -->
+
+<section
+    class="monitor"
+    id="monitor"
+>
+
+    <div class="monitor-wrapper">
+
+        <div class="live-header">
+
+            <div class="live-title">
+                Live Monitor
+            </div>
+
+            <div class="live-status">
+
+                <span
+                    class="live-dot"
+                    id="connectionDot"
+                ></span>
+
+                <span id="connectionStatus">
+                    Connecting...
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="video-box">
+
+            <div class="video-topbar">
+
+                <span>
+                    Camera Stream
+                </span>
+
+                <span id="videoStatus">
+                    Connecting...
+                </span>
+
+            </div>
 
             <img
+                id="videoFeed"
                 src="/video"
-                alt="Live Computer Vision Video"
+                alt="Live computer vision stream"
             >
 
         </div>
 
-        <!-- METRICS -->
-        <div class="metrics-grid">
 
-            <div class="card">
-                <div class="card-title">
+        <!-- METRICS -->
+
+        <div class="metrics">
+
+            <div class="metric">
+
+                <div class="metric-label">
                     Current Occupancy
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="occupancy">0</span>
-                    <span class="unit">people</span>
+                    <span class="metric-unit">
+                        people
+                    </span>
                 </div>
+
             </div>
 
 
-            <div class="card">
-                <div class="card-title">
+            <div class="metric">
+
+                <div class="metric-label">
                     Total Entries
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="entries">0</span>
                 </div>
+
             </div>
 
 
-            <div class="card">
-                <div class="card-title">
-                    Average Dwell Time
+            <div class="metric">
+
+                <div class="metric-label">
+                    Average Dwell
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="dwell">0</span>
-                    <span class="unit">sec</span>
+                    <span class="metric-unit">
+                        sec
+                    </span>
                 </div>
+
             </div>
 
 
-            <div class="card">
-                <div class="card-title">
+            <div class="metric">
+
+                <div class="metric-label">
                     Processing FPS
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="fps">0</span>
+                    <span class="metric-unit">
+                        FPS
+                    </span>
                 </div>
+
             </div>
 
 
-            <div class="card">
-                <div class="card-title">
+            <div class="metric">
+
+                <div class="metric-label">
                     Inference Latency
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="latency">0</span>
-                    <span class="unit">ms</span>
+                    <span class="metric-unit">
+                        ms
+                    </span>
                 </div>
+
             </div>
 
 
-            <div class="card">
-                <div class="card-title">
+            <div class="metric">
+
+                <div class="metric-label">
+                    Input Frames
+                </div>
+
+                <div class="metric-value">
+                    <span id="inputFrames">0</span>
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Processed Frames
+                </div>
+
+                <div class="metric-value">
+                    <span id="processedFrames">0</span>
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
                     Dropped Frames
                 </div>
 
-                <div class="card-value">
+                <div class="metric-value">
                     <span id="dropped">0</span>
+
+                    <span class="metric-unit">
+                        (<span id="dropRatio">0</span>%)
+                    </span>
+
                 </div>
+
             </div>
 
         </div>
 
     </div>
 
+</section>
 
-    <script>
 
-        const status =
-            document.getElementById("status");
+<!-- =========================
+     PERFORMANCE
+========================= -->
 
-        const socket =
-            new WebSocket(
-                "ws://" +
-                window.location.host +
-                "/ws"
-            );
+<section
+    class="performance"
+    id="performance"
+>
+
+    <div class="section-heading">
+
+        <h2>
+            Performance at a glance.
+        </h2>
+
+        <p>
+            Monitor inference behavior as the system processes
+            the live stream.
+        </p>
+
+    </div>
+
+
+    <div class="charts">
+
+        <div class="chart-card">
+
+            <h3>
+                FPS History
+            </h3>
+
+            <canvas id="fpsChart"></canvas>
+
+        </div>
+
+
+        <div class="chart-card">
+
+            <h3>
+                Inference Latency
+            </h3>
+
+            <canvas id="latencyChart"></canvas>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<footer>
+
+    D5 Vision · Real-Time Computer Vision Service
+
+    <br>
+
+    YOLO · ByteTrack · FastAPI · OpenCV
+
+</footer>
+
+
+<script>
+
+    /* =========================
+       NAVIGATION
+    ========================= */
+
+    function scrollToMonitor() {
+
+        document
+            .getElementById("monitor")
+            .scrollIntoView({
+                behavior: "smooth"
+            });
+
+    }
+
+
+    function scrollToFeatures() {
+
+        document
+            .getElementById("features")
+            .scrollIntoView({
+                behavior: "smooth"
+            });
+
+    }
+
+
+    /* =========================
+       WEBSOCKET
+    ========================= */
+
+    let socket;
+
+    let reconnectTimer;
+
+
+    const status =
+        document.getElementById(
+            "connectionStatus"
+        );
+
+
+    const dot =
+        document.getElementById(
+            "connectionDot"
+        );
+
+
+    function connectWebSocket() {
+
+        clearTimeout(reconnectTimer);
+
+
+        socket = new WebSocket(
+            "ws://" +
+            window.location.host +
+            "/ws"
+        );
 
 
         socket.onopen = function () {
 
             status.textContent =
-                "🟢 Connected to CV Service";
+                "System Online";
+
+            dot.classList.add(
+                "active"
+            );
 
         };
 
 
-        socket.onmessage = function (event) {
+        socket.onmessage =
+            function(event) {
 
-            const data =
-                JSON.parse(event.data);
+                const data =
+                    JSON.parse(
+                        event.data
+                    );
 
-            document.getElementById(
-                "occupancy"
-            ).textContent =
-                data.occupancy;
 
-            document.getElementById(
-                "entries"
-            ).textContent =
-                data.total_entries;
+                updateMetric(
+                    "occupancy",
+                    data.occupancy
+                );
 
-            document.getElementById(
-                "dwell"
-            ).textContent =
-                data.average_dwell_seconds;
 
-            document.getElementById(
-                "fps"
-            ).textContent =
-                data.fps;
+                updateMetric(
+                    "entries",
+                    data.total_entries
+                );
 
-            document.getElementById(
-                "latency"
-            ).textContent =
-                data.inference_latency_ms;
 
-            document.getElementById(
-                "dropped"
-            ).textContent =
-                data.dropped_frames;
+                updateMetric(
+                    "dwell",
+                    data.average_dwell_seconds
+                );
 
-        };
+
+                updateMetric(
+                    "fps",
+                    data.fps
+                );
+
+
+                updateMetric(
+                    "latency",
+                    data.inference_latency_ms
+                );
+
+
+                updateMetric(
+                    "inputFrames",
+                    data.input_frames
+                );
+
+
+                updateMetric(
+                    "processedFrames",
+                    data.processed_frames
+                );
+
+
+                updateMetric(
+                    "dropped",
+                    data.dropped_frames
+                );
+
+
+                updateMetric(
+                    "dropRatio",
+                    data.drop_ratio
+                );
+
+
+                addData(
+                    fpsHistory,
+                    Number(data.fps) || 0
+                );
+
+
+                addData(
+                    latencyHistory,
+                    Number(
+                        data.inference_latency_ms
+                    ) || 0
+                );
+
+
+                drawChart(
+                    "fpsChart",
+                    fpsHistory
+                );
+
+
+                drawChart(
+                    "latencyChart",
+                    latencyHistory
+                );
+
+            };
 
 
         socket.onclose = function () {
 
             status.textContent =
-                "🔴 WebSocket disconnected";
+                "Reconnecting...";
+
+            dot.classList.remove(
+                "active"
+            );
+
+
+            reconnectTimer =
+                setTimeout(
+                    connectWebSocket,
+                    2000
+                );
 
         };
 
-    </script>
+
+        socket.onerror = function () {
+
+            status.textContent =
+                "Connection Error";
+
+            dot.classList.remove(
+                "active"
+            );
+
+        };
+
+    }
+
+
+    /* =========================
+       METRIC ANIMATION
+    ========================= */
+
+    function updateMetric(
+        id,
+        value
+    ) {
+
+        const element =
+            document.getElementById(id);
+
+
+        if (!element) {
+            return;
+        }
+
+
+        element.textContent =
+            value ?? 0;
+
+    }
+
+
+    /* =========================
+       CHART DATA
+    ========================= */
+
+    const MAX_POINTS = 30;
+
+    const fpsHistory = [];
+
+    const latencyHistory = [];
+
+
+    function addData(
+        array,
+        value
+    ) {
+
+        array.push(value);
+
+
+        if (
+            array.length >
+            MAX_POINTS
+        ) {
+
+            array.shift();
+
+        }
+
+    }
+
+
+    /* =========================
+       CANVAS CHART
+    ========================= */
+
+    function drawChart(
+        canvasId,
+        data
+    ) {
+
+        const canvas =
+            document.getElementById(
+                canvasId
+            );
+
+
+        if (!canvas || data.length < 2) {
+            return;
+        }
+
+
+        const ctx =
+            canvas.getContext("2d");
+
+
+        const width =
+            canvas.clientWidth;
+
+
+        const height =
+            canvas.clientHeight;
+
+
+        const ratio =
+            window.devicePixelRatio || 1;
+
+
+        canvas.width =
+            width * ratio;
+
+
+        canvas.height =
+            height * ratio;
+
+
+        ctx.scale(
+            ratio,
+            ratio
+        );
+
+
+        ctx.clearRect(
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        const max =
+            Math.max(...data) || 1;
+
+
+        const min =
+            Math.min(...data);
+
+
+        const range =
+            max - min || 1;
+
+
+        ctx.beginPath();
+
+
+        data.forEach(
+            (value, index) => {
+
+                const x =
+                    (
+                        index /
+                        (data.length - 1)
+                    ) * width;
+
+
+                const y =
+                    height -
+                    (
+                        (value - min) /
+                        range
+                    ) *
+                    (height - 20);
+
+
+                if (index === 0) {
+
+                    ctx.moveTo(
+                        x,
+                        y
+                    );
+
+                } else {
+
+                    ctx.lineTo(
+                        x,
+                        y
+                    );
+
+                }
+
+            }
+        );
+
+
+        ctx.strokeStyle =
+            "#6366f1";
+
+
+        ctx.lineWidth = 3;
+
+
+        ctx.lineJoin =
+            "round";
+
+
+        ctx.lineCap =
+            "round";
+
+
+        ctx.stroke();
+
+    }
+
+
+    /* =========================
+       VIDEO STATUS
+    ========================= */
+
+    const videoFeed =
+        document.getElementById(
+            "videoFeed"
+        );
+
+
+    const videoStatus =
+        document.getElementById(
+            "videoStatus"
+        );
+
+
+    videoFeed.onload =
+        function() {
+
+            videoStatus.textContent =
+                "Live";
+
+        };
+
+
+    videoFeed.onerror =
+        function() {
+
+            videoStatus.textContent =
+                "Stream unavailable";
+
+        };
+
+
+    /* =========================
+       START
+    ========================= */
+
+    connectWebSocket();
+
+</script>
 
 </body>
-
 </html>

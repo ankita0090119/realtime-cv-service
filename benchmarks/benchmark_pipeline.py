@@ -7,7 +7,13 @@ MODEL_PATH = "yolo11n.pt"
 VIDEO_PATH = "data/videos/CAM1.mp4"
 
 WARMUP_FRAMES = 5
-BENCHMARK_FRAMES = 50
+BENCHMARK_FRAMES = 100
+
+IMGSZ = 416
+ZONE_X1 = 1200
+ZONE_Y1 = 200
+ZONE_X2 = 1630
+ZONE_Y2 = 880
 
 
 def main():
@@ -45,25 +51,45 @@ def main():
             frame,
             persist=True,
             tracker="bytetrack.yaml",
+            imgsz=IMGSZ,
             verbose=False
         )
 
-    print("Running service pipeline benchmark...")
-
-    start = time.perf_counter()
+    inference_times = []
+    postprocessing_times = []
+    end_to_end_times = []
 
     processed_frames = 0
 
+    print("Running baseline benchmark...")
+
     for frame in benchmark_frames:
+
+        # ---------------------------------
+        # End-to-end timing starts here
+        # ---------------------------------
+        frame_start = time.perf_counter()
+
+        # ---------------------------------
+        # YOLO + ByteTrack
+        # ---------------------------------
+        inference_start = time.perf_counter()
+
         results = model.track(
             frame,
             persist=True,
             tracker="bytetrack.yaml",
+            imgsz=IMGSZ,
             verbose=False
         )
 
-        # Simulate the basic post-processing
-        # performed by our CV service.
+        inference_end = time.perf_counter()
+
+        # ---------------------------------
+        # Post-processing + zone analytics
+        # ---------------------------------
+        post_start = time.perf_counter()
+
         result = results[0]
 
         if result.boxes.id is not None:
@@ -84,31 +110,51 @@ def main():
                 center_x = int((x1 + x2) / 2)
                 center_y = int((y1 + y2) / 2)
 
-                # Simulate zone check.
                 inside_zone = (
-                    1200 <= center_x <= 1630
-                    and 200 <= center_y <= 880
+                    ZONE_X1 <= center_x <= ZONE_X2
+                    and ZONE_Y1 <= center_y <= ZONE_Y2
                 )
 
                 if inside_zone:
                     pass
 
-        processed_frames += 1
+        post_end = time.perf_counter()
 
-    elapsed = time.perf_counter() - start
+        frame_end = time.perf_counter()
+
+        inference_times.append(
+            (inference_end - inference_start) * 1000
+        )
+
+        postprocessing_times.append(
+            (post_end - post_start) * 1000
+        )
+
+        end_to_end_times.append(
+            (frame_end - frame_start) * 1000
+        )
+
+        processed_frames += 1
 
     if processed_frames == 0:
         raise RuntimeError("No frames were processed")
 
-    average_latency = elapsed / processed_frames
-    fps = processed_frames / elapsed
+    total_time = sum(end_to_end_times) / 1000
+
+    avg_inference = sum(inference_times) / processed_frames
+    avg_postprocessing = sum(postprocessing_times) / processed_frames
+    avg_end_to_end = sum(end_to_end_times) / processed_frames
+
+    fps = 1000 / avg_end_to_end
 
     print()
-    print("=== Service Pipeline Benchmark ===")
-    print(f"Frames processed: {processed_frames}")
-    print(f"Total time: {elapsed:.2f} seconds")
-    print(f"Average processing latency: {average_latency * 1000:.2f} ms")
-    print(f"Throughput: {fps:.2f} FPS")
+    print("=== Baseline Benchmark ===")
+    print(f"Frames processed:          {processed_frames}")
+    print(f"Average YOLO + tracking:   {avg_inference:.2f} ms")
+    print(f"Average post-processing:    {avg_postprocessing:.2f} ms")
+    print(f"Average end-to-end latency: {avg_end_to_end:.2f} ms")
+    print(f"End-to-end FPS:             {fps:.2f}")
+    print(f"Measured processing time:   {total_time:.2f} seconds")
 
 
 if __name__ == "__main__":
