@@ -141,12 +141,19 @@ def generate_video_frames(
 
         last_frame_id = frame_id
 
+        # Resize only for streaming.
+        # YOLO inference still runs at 416x416.
+        stream_frame = cv2.resize(
+            frame,
+            (960, 540)
+        )
+
         success, buffer = cv2.imencode(
             ".jpg",
-            frame,
+            stream_frame,
             [
                 cv2.IMWRITE_JPEG_QUALITY,
-                80
+                60
             ]
         )
 

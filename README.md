@@ -190,6 +190,10 @@ python -m uvicorn app.api.server:app --host 127.0.0.1 --port 8000
 
 Open the dashboard at <http://127.0.0.1:8000/dashboard/>.
 
+## Screenshot
+
+![D5Vision Dashboard](docs/dashboard.png)
+
 ## Docker
 
 **Build**

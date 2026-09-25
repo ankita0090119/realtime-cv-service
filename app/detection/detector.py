@@ -10,5 +10,6 @@ class Detector:
             frame,
             persist=True,
             tracker="bytetrack.yaml",
-            verbose=False
+            verbose=False,
+            imgsz=416
         )
