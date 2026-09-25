@@ -1,58 +1,74 @@
 # D5 Real-Time Computer Vision Service
 
-A production-oriented real-time computer vision service built with **Python, YOLO, ByteTrack, OpenCV, FastAPI, and Docker**.
+A production-oriented real-time computer vision service built with **Python, YOLO11, ByteTrack, OpenCV, FastAPI, WebSocket, and Docker**.
 
-The system processes video streams, performs object detection and tracking, and provides real-time analytics such as **zone occupancy, entry/exit events, dwell time, FPS, inference latency, and frame-drop statistics**.
+The system processes video, performs object detection and multi-object tracking, and provides real-time analytics including **zone occupancy, entry/exit events, dwell time, FPS, inference latency, and frame-drop statistics**.
+
+---
 
 ## Features
 
 - Real-time video processing with OpenCV
-- YOLO object detection
-- ByteTrack multi-object tracking
-- Zone occupancy detection
+- YOLO11 object detection
+- ByteTrack multi-object tracking with persistent IDs
+- Zone-based occupancy analytics
 - Entry/exit tracking
 - Dwell-time calculation
-- Bounded frame buffer with frame dropping
+- Bounded frame buffer with drop-oldest behavior
 - FPS and inference-latency monitoring
+- Frame-drop/backpressure monitoring
 - FastAPI REST API
 - WebSocket live metrics
-- MJPEG video streaming
+- MJPEG annotated video streaming
 - Health and readiness endpoints
+- Live browser dashboard
 - Docker support
 - Unit tests with pytest
 - PyTorch, ONNX Runtime, and OpenVINO benchmarking
 
+---
+
 ## Architecture
 
 ```text
-Video Source
-     │
-     ▼
-VideoReader
-     │
-     ▼
-FrameProducer
-     │
-     ▼
-FrameBuffer
-     │
-     ▼
-YOLO + ByteTrack
-     │
-     ├── Zone Occupancy
-     ├── Entry / Exit
-     ├── Dwell Time
-     └── Performance Metrics
-              │
-              ▼
-          CVService
-              │
-       ┌──────┼──────┐
-       ▼      ▼      ▼
-    /metrics  /ws   /video
-                     │
-                     ▼
-                 Dashboard
+                         Video Source
+                              │
+                              ▼
+                        VideoReader
+                              │
+                              ▼
+                       FrameProducer
+                         (thread)
+                              │
+                              ▼
+                  Bounded FrameBuffer
+                  (drop-oldest queue)
+                              │
+                              ▼
+                         CVService
+                              │
+                              ▼
+                    YOLO11 + ByteTrack
+                              │
+              ┌───────────────┼────────────────┐
+              │               │                │
+              ▼               ▼                ▼
+       Zone Occupancy    Dwell Time      Performance
+       Entry / Exit      Tracking        Metrics
+              │               │                │
+              └───────────────┼────────────────┘
+                              │
+                              ▼
+                         FastAPI API
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+             ▼                ▼                ▼
+        GET /metrics       WS /ws         GET /video
+             │                │                │
+             └────────────────┼────────────────┘
+                              ▼
+                       Live Dashboard
 ```
 
 ## Project Structure
@@ -105,8 +121,12 @@ realtime-cv-service/
 │   ├── test_metrics.py
 │   └── test_zone.py
 │
+├── docs/
+│   └── dashboard.png
+│
 ├── Dockerfile
 ├── requirements.txt
+├── LICENSE
 └── README.md
 ```
 
@@ -114,10 +134,11 @@ realtime-cv-service/
 
 - Python
 - OpenCV
-- YOLO
+- YOLO11
 - ByteTrack
 - FastAPI
 - WebSocket
+- MJPEG
 - PyTorch
 - ONNX Runtime
 - OpenVINO
@@ -133,6 +154,10 @@ realtime-cv-service/
 | `GET /metrics` | Current analytics and performance metrics |
 | `GET /video` | Annotated MJPEG video stream |
 | `WS /ws` | Real-time metrics |
+
+## Interactive API documentation
+
+`http://127.0.0.1:8000/docs`
 
 ## Configuration
 
