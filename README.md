@@ -232,3 +232,7 @@ Benchmark scripts are available in the `benchmarks/` directory. They include:
 - OpenVINO inference
 - Detection vs. tracking
 - End-to-end pipeline performance
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
